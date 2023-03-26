@@ -14,7 +14,7 @@ dataPromise.then(data => {
 const metaDataBox = d3.select('#sample-metadata');
 const dropdownMenu = d3.select('#selDataset');
 
-// Initialize webpage
+// Initialize charts and dropdown menu
 function init() {
 
     // Populate dropdown menu
@@ -23,11 +23,15 @@ function init() {
         option.text(name);
     })
 
+    // Initial test subject's data
+    const samplesData = otuData.samples[0];
+    const metadata = otuData.metadata[0];
+
     // Horizontal bar chart
-    trace = {
-        x: otuData.samples[0].sample_values.slice(0, 11),
-        y: otuData.samples[0].otu_ids.slice(0, 11).map(id => `OTU-${id}`),
-        text: otuData.samples[0].otu_labels.slice(0, 11),
+    barTrace = {
+        x: samplesData.sample_values.slice(0, 11),
+        y: samplesData.otu_ids.slice(0, 11).map(id => `OTU-${id}`),
+        text: samplesData.otu_labels.slice(0, 11),
         type: 'bar',
         orientation: 'h',
         transforms: [{
@@ -36,12 +40,22 @@ function init() {
             order: 'ascending'
         }]
     };
-    Plotly.newPlot('bar', [trace]);
+    Plotly.newPlot('bar', [barTrace]);
 
     // Bubble chart
+    bubbleTrace = {
+        x: samplesData.otu_ids,
+        y: samplesData.sample_values,
+        text: samplesData.otu_labels,
+        mode: 'markers',
+        marker: {
+            size: samplesData.sample_values,
+            color: samplesData.otu_ids
+        }
+    };
+    Plotly.newPlot('bubble', [bubbleTrace]);
 
     // Demographics
-    const metadata = otuData.metadata[0];
     for (const [key, value] of Object.entries(metadata)) {
         let p = metaDataBox.append('p');
         p.text(`${key}: ${value}`)
@@ -50,18 +64,25 @@ function init() {
 
 // Update function based on dropdown selection
 function optionChanged(id) {
+
+    // Current data based on id selected
     const sampleData = otuData.samples.filter(item => item.id === id)[0];
+    const metadata = otuData.metadata.filter(item => item.id === parseInt(id))[0];
 
     // Update horizontal bar chart
-    let x = sampleData.sample_values.slice(0, 11);
-    let y = sampleData.otu_ids.slice(0, 11).map(id => `OTU-${id}`);
-    let text = sampleData.otu_labels.slice(0, 11);
-    Plotly.update('bar', {x:[x], y:[y], text:[text]});
+    let barX = sampleData.sample_values.slice(0, 11);
+    let barY = sampleData.otu_ids.slice(0, 11).map(id => `OTU-${id}`);
+    let barText = sampleData.otu_labels.slice(0, 11);
+    Plotly.update('bar', {x:[barX], y:[barY], text:[barText]});
 
     // Update bubble chart
-    
+    let bubX = sampleData.otu_ids;
+    let bubY = sampleData.sample_values;
+    let bubText = sampleData.otu_labels;
+    Plotly.update('bubble', {x:[bubX], y:[bubY], text:[bubText],
+                             marker:{size:bubY, color:bubX}});
+
     // Update demographics
-    const metadata = otuData.metadata.filter(item => item.id === parseInt(id))[0];
     metaDataBox.html(null);
     for (const [key, value] of Object.entries(metadata)) {
         let p = metaDataBox.append('p');
@@ -69,4 +90,5 @@ function optionChanged(id) {
     }
 }
 
+// Initialize after dataPromise if fulfilled
 dataPromise.then(() => init());
